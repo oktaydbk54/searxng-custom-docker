@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  searxng:
+    image: searxng/searxng
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      INSTANCE_NAME: ${INSTANCE_NAME:-searxng-local}
+      BASE_URL: ${SERVICE_FQDN_SEARXNG_8080:-http://localhost:8080}
+      SEARXNG_URL: ${SERVICE_FQDN_SEARXNG_8080:-http://localhost:8080}
+      SEARXNG_BIND_ADDRESS: ${SEARXNG_BIND_ADDRESS:-0.0.0.0}
+      SEARXNG_SECRET: ${SERVICE_PASSWORD_SEARXNGSECRET:-supersecret}
+      SEARXNG_REDIS_URL: redis://redis:6379/0
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - ./settings.yml:/etc/searxng/settings.yml
+      - ./limiter.toml:/etc/searxng/limiter.toml
+    ports:
+      - "8080:8080"
+
+  redis:
+    image: 'redis:7'
+    restart: always
+    volumes:
+      - 'redis-data:/data'
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  redis-data:
